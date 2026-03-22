@@ -1,3 +1,38 @@
+.pwa-install-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(30, 41, 59, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.pwa-install-content {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 32px rgba(37,99,235,0.13);
+  padding: 2.2rem 2rem 1.7rem 2rem;
+  text-align: center;
+  min-width: 320px;
+  max-width: 90vw;
+}
+.pwa-install-content h3 {
+  color: #3730a3;
+  font-size: 1.35rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+.pwa-install-content p {
+  color: #64748b;
+  font-size: 1.05rem;
+  margin-bottom: 1.1rem;
+}
+.pwa-install-content button {
+  margin-top: 0.2rem;
+}
 .counter {
 
 

@@ -1,4 +1,29 @@
 import React, { useEffect, useState } from 'react';
+  // PWA install prompt logic
+  const [showInstall, setShowInstall] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const alreadyInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (alreadyInstalled) return;
+    function beforeInstallPrompt(e) {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstall(true);
+    }
+    window.addEventListener('beforeinstallprompt', beforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', beforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstall(false);
+      }
+    }
+  };
 
 const API_URL = 'https://vinaknaikadventure-1.onrender.com/api/media';
 
@@ -12,60 +37,71 @@ const T = {
   accentHover: '#f0b55a',
   danger: '#e05252',
   dangerHover: '#f06363',
-  success: '#4caf81',
-  muted: '#6b8070',
-  text: '#d4e0d8',
-  textDim: '#8fa99a',
-  white: '#f0f7f2',
-};
-
-// ─── GLOBAL STYLES INJECTED ONCE ────────────────────────────────────────────
-const GlobalStyle = () => {
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      body { background: ${T.bg}; color: ${T.text}; font-family: 'DM Sans', sans-serif; }
-      ::-webkit-scrollbar { width: 6px; } 
-      ::-webkit-scrollbar-track { background: ${T.bg}; }
-      ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 3px; }
-      
-      @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(18px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes shimmer {
-        0%   { background-position: -200% center; }
-        100% { background-position:  200% center; }
-      }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      .media-card-enter {
-        animation: fadeUp 0.45s cubic-bezier(.22,.68,0,1.2) both;
-      }
-      .card-hover:hover .card-overlay {
-        opacity: 1 !important;
-      }
-      .card-hover:hover img,
-      .card-hover:hover video {
-        transform: scale(1.06) !important;
-      }
-      input[type="file"]::-webkit-file-upload-button {
-        background: ${T.border};
-        color: ${T.text};
-        border: none;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-family: 'DM Sans', sans-serif;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-  return null;
+  return (
+    <div className="container">
+      <div className="album-header">
+        <h1>Adventure Media Album</h1>
+        <p>Upload, view, and manage your adventure photos and videos in a beautiful album grid. Enjoy a modern, interactive experience!</p>
+      </div>
+      {showInstall && (
+        <div className="pwa-install-popup">
+          <div className="pwa-install-content">
+            <span role="img" aria-label="app">📱</span>
+            <h3>Install Adventure Media Album</h3>
+            <p>Get quick access from your home screen. Install the app?</p>
+            <button className="submit-btn" onClick={handleInstallClick}>Install</button>
+            <button className="delete-btn" style={{marginLeft:8}} onClick={() => setShowInstall(false)}>Not now</button>
+          </div>
+        </div>
+      )}
+      {error && <div style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>{error}</div>}
+      {loading ? (
+        <div style={{ textAlign: 'center', fontSize: '1.2rem', color: '#6366f1' }}>Loading...</div>
+      ) : (
+        <>
+          {!editing && !replacing && (
+            <MediaForm onSubmit={handleAdd} />
+          )}
+          {editing && (
+            <MediaForm
+              onSubmit={handleUpdate}
+              initialData={editing}
+              isEdit
+            />
+          )}
+          {replacing && (
+            <MediaForm
+              onSubmit={handleReplaceFile}
+              initialData={replacing}
+            />
+          )}
+          <MediaList
+            media={media}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onReplace={handleReplace}
+          />
+          <div className="pagination">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!pagination.hasPrev}
+            >
+              Previous
+            </button>
+            <span style={{ margin: '0 10px', fontWeight: 500, color: '#3730a3' }}>
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!pagination.hasNext}
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 // ─── MEDIA FORM ──────────────────────────────────────────────────────────────
