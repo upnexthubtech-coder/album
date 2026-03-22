@@ -1,33 +1,7 @@
 import React, { useEffect, useState } from 'react';
-  // PWA install prompt logic
-  const [showInstall, setShowInstall] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-
-  useEffect(() => {
-    const alreadyInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (alreadyInstalled) return;
-    function beforeInstallPrompt(e) {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstall(true);
-    }
-    window.addEventListener('beforeinstallprompt', beforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', beforeInstallPrompt);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowInstall(false);
-      }
-    }
-  };
 
 const API_URL = 'https://vinaknaikadventure-1.onrender.com/api/media';
 
-// ─── TOKENS ──────────────────────────────────────────────────────────────────
 const T = {
   bg: '#0d0f0e',
   surface: '#161a18',
@@ -36,75 +10,138 @@ const T = {
   accent: '#e8a045',
   accentHover: '#f0b55a',
   danger: '#e05252',
-  dangerHover: '#f06363',
+  success: '#4caf81',
+  white: '#f7f7f5',
+  text: '#d7ddd9',
+  textDim: '#a6b0aa',
+  muted: '#7d8b83',
+};
+
+const GlobalStyle = () => (
+  <style>{`
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'DM Sans', sans-serif;
+      background: ${T.bg};
+      color: ${T.text};
+    }
+    button, input, select, textarea {
+      font: inherit;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .card-hover:hover .card-overlay {
+      opacity: 1 !important;
+    }
+  `}</style>
+);
+
+const PwaInstallPrompt = () => {
+  const [showInstall, setShowInstall] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const alreadyInstalled =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    if (alreadyInstalled) return;
+
+    const beforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstall(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', beforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', beforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstall(false);
+    }
+  };
+
+  if (!showInstall) return null;
+
   return (
-    <div className="container">
-      <div className="album-header">
-        <h1>Adventure Media Album</h1>
-        <p>Upload, view, and manage your adventure photos and videos in a beautiful album grid. Enjoy a modern, interactive experience!</p>
-      </div>
-      {showInstall && (
-        <div className="pwa-install-popup">
-          <div className="pwa-install-content">
-            <span role="img" aria-label="app">📱</span>
-            <h3>Install Adventure Media Album</h3>
-            <p>Get quick access from your home screen. Install the app?</p>
-            <button className="submit-btn" onClick={handleInstallClick}>Install</button>
-            <button className="delete-btn" style={{marginLeft:8}} onClick={() => setShowInstall(false)}>Not now</button>
-          </div>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.45)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          background: T.surface,
+          border: `1px solid ${T.border}`,
+          borderRadius: 16,
+          padding: 24,
+          boxShadow: '0 18px 50px rgba(0,0,0,0.45)',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: 36, marginBottom: 8 }}>📱</div>
+        <h3 style={{ margin: '0 0 10px', color: T.white }}>Install Adventure Media Album</h3>
+        <p style={{ margin: '0 0 18px', color: T.textDim, lineHeight: 1.6 }}>
+          Get quick access from your home screen. Install the app?
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
+          <button
+            onClick={handleInstallClick}
+            style={{
+              background: T.accent,
+              color: '#1a0f00',
+              border: 'none',
+              borderRadius: 10,
+              padding: '12px 18px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Install
+          </button>
+          <button
+            onClick={() => setShowInstall(false)}
+            style={{
+              background: 'transparent',
+              color: T.text,
+              border: `1px solid ${T.border}`,
+              borderRadius: 10,
+              padding: '12px 18px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Not now
+          </button>
         </div>
-      )}
-      {error && <div style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>{error}</div>}
-      {loading ? (
-        <div style={{ textAlign: 'center', fontSize: '1.2rem', color: '#6366f1' }}>Loading...</div>
-      ) : (
-        <>
-          {!editing && !replacing && (
-            <MediaForm onSubmit={handleAdd} />
-          )}
-          {editing && (
-            <MediaForm
-              onSubmit={handleUpdate}
-              initialData={editing}
-              isEdit
-            />
-          )}
-          {replacing && (
-            <MediaForm
-              onSubmit={handleReplaceFile}
-              initialData={replacing}
-            />
-          )}
-          <MediaList
-            media={media}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onReplace={handleReplace}
-          />
-          <div className="pagination">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={!pagination.hasPrev}
-            >
-              Previous
-            </button>
-            <span style={{ margin: '0 10px', fontWeight: 500, color: '#3730a3' }}>
-              Page {pagination.page} of {pagination.totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!pagination.hasNext}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
+      </div>
     </div>
   );
 };
 
-// ─── MEDIA FORM ──────────────────────────────────────────────────────────────
 const MediaForm = ({ onSubmit, initialData, isEdit, onCancel }) => {
   const [title, setTitle] = useState(initialData?.title || '');
   const [type, setType] = useState(initialData?.type || 'image');
@@ -162,17 +199,51 @@ const MediaForm = ({ onSubmit, initialData, isEdit, onCancel }) => {
 
   return (
     <div style={formWrap}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: T.white, fontWeight: 700 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 28,
+        }}
+      >
+        <h2
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 22,
+            color: T.white,
+            fontWeight: 700,
+            margin: 0,
+          }}
+        >
           {isEdit ? '✏️ Edit Media' : '+ Upload Adventure'}
         </h2>
         {onCancel && (
-          <button onClick={onCancel} style={{ background: 'none', border: 'none', color: T.muted, cursor: 'pointer', fontSize: 22, lineHeight: 1 }}>×</button>
+          <button
+            onClick={onCancel}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: T.muted,
+              cursor: 'pointer',
+              fontSize: 22,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
         )}
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 16, marginBottom: 20 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 160px',
+            gap: 16,
+            marginBottom: 20,
+          }}
+        >
           <div>
             <label style={label}>Title</label>
             <input
@@ -182,8 +253,8 @@ const MediaForm = ({ onSubmit, initialData, isEdit, onCancel }) => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              onFocus={e => e.target.style.borderColor = T.accent}
-              onBlur={e => e.target.style.borderColor = T.border}
+              onFocus={(e) => (e.target.style.borderColor = T.accent)}
+              onBlur={(e) => (e.target.style.borderColor = T.border)}
             />
           </div>
           <div>
@@ -204,7 +275,10 @@ const MediaForm = ({ onSubmit, initialData, isEdit, onCancel }) => {
             <label style={label}>File</label>
             <div
               style={dropZone}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
               onDragLeave={() => setDragging(false)}
               onDrop={(e) => {
                 e.preventDefault();
@@ -215,16 +289,35 @@ const MediaForm = ({ onSubmit, initialData, isEdit, onCancel }) => {
               {file ? (
                 <div style={{ color: T.accent, fontWeight: 500 }}>
                   📎 {file.name}
-                  <span style={{ color: T.muted, marginLeft: 8, fontSize: 12 }}>({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                  <span style={{ color: T.muted, marginLeft: 8, fontSize: 12 }}>
+                    ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                  </span>
                 </div>
               ) : (
                 <>
                   <div style={{ fontSize: 28, marginBottom: 8 }}>☁️</div>
-                  <div style={{ color: T.textDim, fontSize: 13 }}>Drag & drop or <label style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline' }}>
-                    browse
-                    <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files[0])} required />
-                  </label></div>
-                  <div style={{ color: T.muted, fontSize: 11, marginTop: 4 }}>Images & videos supported</div>
+                  <div style={{ color: T.textDim, fontSize: 13 }}>
+                    Drag & drop or{' '}
+                    <label
+                      style={{
+                        color: T.accent,
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      browse
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => setFile(e.target.files[0])}
+                        required
+                      />
+                    </label>
+                  </div>
+                  <div style={{ color: T.muted, fontSize: 11, marginTop: 4 }}>
+                    Images & videos supported
+                  </div>
                 </>
               )}
             </div>
@@ -246,8 +339,14 @@ const MediaForm = ({ onSubmit, initialData, isEdit, onCancel }) => {
             fontFamily: "'DM Sans', sans-serif",
             transition: 'all 0.2s',
           }}
-          onMouseEnter={e => { e.target.style.background = T.accentHover; e.target.style.transform = 'translateY(-1px)'; }}
-          onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.transform = 'none'; }}
+          onMouseEnter={(e) => {
+            e.target.style.background = T.accentHover;
+            e.target.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = T.accent;
+            e.target.style.transform = 'none';
+          }}
         >
           {isEdit ? 'Save Changes' : 'Upload Media'}
         </button>
@@ -256,10 +355,9 @@ const MediaForm = ({ onSubmit, initialData, isEdit, onCancel }) => {
   );
 };
 
-// ─── MEDIA CARD ──────────────────────────────────────────────────────────────
 const MediaCard = ({ item, onEdit, onDelete, onReplace, index }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const imgUrl = `https://vinaknaikadventure-1.onrender.com/api/media/file/${item.fileId}`;
+  const fileUrl = `https://vinaknaikadventure-1.onrender.com/api/media/file/${item.fileId}`;
 
   const card = {
     background: T.card,
@@ -268,7 +366,6 @@ const MediaCard = ({ item, onEdit, onDelete, onReplace, index }) => {
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    cursor: 'default',
     animation: `fadeUp 0.4s ${index * 0.05}s cubic-bezier(.22,.68,0,1.2) both`,
     transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
     position: 'relative',
@@ -279,14 +376,16 @@ const MediaCard = ({ item, onEdit, onDelete, onReplace, index }) => {
     aspectRatio: '4/3',
     objectFit: 'cover',
     display: 'block',
-    transition: 'transform 0.4s ease',
   };
 
   const typeBadge = {
     position: 'absolute',
     top: 10,
     left: 10,
-    background: item.type === 'video' ? 'rgba(232,160,69,0.85)' : 'rgba(76,175,129,0.85)',
+    background:
+      item.type === 'video'
+        ? 'rgba(232,160,69,0.85)'
+        : 'rgba(76,175,129,0.85)',
     color: '#fff',
     fontSize: 10,
     fontWeight: 700,
@@ -305,18 +404,6 @@ const MediaCard = ({ item, onEdit, onDelete, onReplace, index }) => {
     opacity: 0,
     transition: 'opacity 0.3s ease',
     zIndex: 1,
-    className: 'card-overlay',
-  };
-
-  const info = {
-    padding: '12px 14px 8px',
-    borderTop: `1px solid ${T.border}`,
-  };
-
-  const actions = {
-    display: 'flex',
-    gap: 6,
-    padding: '8px 14px 12px',
   };
 
   const btnBase = {
@@ -332,76 +419,92 @@ const MediaCard = ({ item, onEdit, onDelete, onReplace, index }) => {
     letterSpacing: '0.02em',
   };
 
-  const editBtn = { ...btnBase, background: 'rgba(232,160,69,0.15)', color: T.accent };
-  const replaceBtn = { ...btnBase, background: 'rgba(76,175,129,0.15)', color: T.success };
-  const deleteBtn = { ...btnBase, background: 'rgba(224,82,82,0.15)', color: T.danger };
-  const confirmBtn = { ...btnBase, background: T.danger, color: '#fff' };
-
   return (
     <div
-      className="card-hover media-card-enter"
+      className="card-hover"
       style={card}
-      onMouseEnter={e => {
+      onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = `0 16px 40px rgba(0,0,0,0.5)`;
-        e.currentTarget.style.borderColor = T.border === T.border ? '#3a4a40' : T.border;
+        e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.5)';
+        e.currentTarget.style.borderColor = '#3a4a40';
       }}
-      onMouseLeave={e => {
+      onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'none';
         e.currentTarget.style.boxShadow = 'none';
         e.currentTarget.style.borderColor = T.border;
       }}
     >
-      {/* Thumb */}
       <div style={{ position: 'relative', overflow: 'hidden' }}>
         <div style={typeBadge}>{item.type === 'video' ? '▶ Video' : '⬛ Photo'}</div>
         <div className="card-overlay" style={overlay} />
         {item.type === 'image' ? (
-          <img src={imgUrl} alt={item.title} style={thumb} loading="lazy" />
+          <img src={fileUrl} alt={item.title} style={thumb} loading="lazy" />
         ) : (
-          <video src={imgUrl} style={thumb} muted playsInline
-            onMouseEnter={e => e.target.play()}
-            onMouseLeave={e => { e.target.pause(); e.target.currentTime = 0; }}
+          <video
+            src={fileUrl}
+            style={thumb}
+            muted
+            playsInline
+            onMouseEnter={(e) => e.target.play()}
+            onMouseLeave={(e) => {
+              e.target.pause();
+              e.target.currentTime = 0;
+            }}
           />
         )}
       </div>
 
-      {/* Info */}
-      <div style={info}>
-        <div style={{ fontWeight: 600, fontSize: 14, color: T.white, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ padding: '12px 14px 8px', borderTop: `1px solid ${T.border}` }}>
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: 14,
+            color: T.white,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
           {item.title}
         </div>
       </div>
 
-      {/* Actions */}
-      <div style={actions}>
+      <div style={{ display: 'flex', gap: 6, padding: '8px 14px 12px' }}>
         {confirmDelete ? (
           <>
-            <button style={confirmBtn}
+            <button
+              style={{ ...btnBase, background: T.danger, color: '#fff' }}
               onClick={() => onDelete(item._id)}
-              onMouseEnter={e => e.target.style.opacity = '0.85'}
-              onMouseLeave={e => e.target.style.opacity = '1'}
-            >Confirm</button>
-            <button style={{ ...btnBase, background: T.border, color: T.text }}
-              onClick={() => setConfirmDelete(false)}>Cancel</button>
+            >
+              Confirm
+            </button>
+            <button
+              style={{ ...btnBase, background: T.border, color: T.text }}
+              onClick={() => setConfirmDelete(false)}
+            >
+              Cancel
+            </button>
           </>
         ) : (
           <>
-            <button style={editBtn}
+            <button
+              style={{ ...btnBase, background: 'rgba(232,160,69,0.15)', color: T.accent }}
               onClick={() => onEdit(item)}
-              onMouseEnter={e => { e.target.style.background = 'rgba(232,160,69,0.25)'; }}
-              onMouseLeave={e => { e.target.style.background = 'rgba(232,160,69,0.15)'; }}
-            >Edit</button>
-            <button style={replaceBtn}
+            >
+              Edit
+            </button>
+            <button
+              style={{ ...btnBase, background: 'rgba(76,175,129,0.15)', color: T.success }}
               onClick={() => onReplace(item)}
-              onMouseEnter={e => { e.target.style.background = 'rgba(76,175,129,0.25)'; }}
-              onMouseLeave={e => { e.target.style.background = 'rgba(76,175,129,0.15)'; }}
-            >Replace</button>
-            <button style={deleteBtn}
+            >
+              Replace
+            </button>
+            <button
+              style={{ ...btnBase, background: 'rgba(224,82,82,0.15)', color: T.danger }}
               onClick={() => setConfirmDelete(true)}
-              onMouseEnter={e => { e.target.style.background = 'rgba(224,82,82,0.25)'; }}
-              onMouseLeave={e => { e.target.style.background = 'rgba(224,82,82,0.15)'; }}
-            >Delete</button>
+            >
+              Delete
+            </button>
           </>
         )}
       </div>
@@ -409,53 +512,90 @@ const MediaCard = ({ item, onEdit, onDelete, onReplace, index }) => {
   );
 };
 
-// ─── MEDIA LIST ──────────────────────────────────────────────────────────────
 const MediaList = ({ media, onEdit, onDelete, onReplace }) => {
-  if (!media.length) return (
-    <div style={{ textAlign: 'center', padding: '80px 20px', color: T.muted }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🏔️</div>
-      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: T.textDim, marginBottom: 8 }}>No adventures yet</div>
-      <div style={{ fontSize: 14 }}>Upload your first photo or video above</div>
-    </div>
-  );
-
-  const grid = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-    gap: 18,
-  };
+  if (!media.length) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 20px', color: T.muted }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🏔️</div>
+        <div
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 24,
+            color: T.textDim,
+            marginBottom: 8,
+          }}
+        >
+          No adventures yet
+        </div>
+        <div style={{ fontSize: 14 }}>Upload your first photo or video above</div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: T.white, fontWeight: 700 }}>Gallery</h2>
-        <span style={{ background: T.border, color: T.muted, borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>
+        <h2
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 22,
+            color: T.white,
+            fontWeight: 700,
+            margin: 0,
+          }}
+        >
+          Gallery
+        </h2>
+        <span
+          style={{
+            background: T.border,
+            color: T.muted,
+            borderRadius: 20,
+            padding: '2px 10px',
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
           {media.length} items
         </span>
       </div>
-      <div style={grid}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: 18,
+        }}
+      >
         {media.map((item, i) => (
-          <MediaCard key={item._id} item={item} index={i} onEdit={onEdit} onDelete={onDelete} onReplace={onReplace} />
+          <MediaCard
+            key={item._id}
+            item={item}
+            index={i}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onReplace={onReplace}
+          />
         ))}
       </div>
     </div>
   );
 };
 
-// ─── SPINNER ─────────────────────────────────────────────────────────────────
 const Spinner = () => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
-    <div style={{
-      width: 40, height: 40,
-      border: `3px solid ${T.border}`,
-      borderTop: `3px solid ${T.accent}`,
-      borderRadius: '50%',
-      animation: 'spin 0.7s linear infinite',
-    }} />
+    <div
+      style={{
+        width: 40,
+        height: 40,
+        border: `3px solid ${T.border}`,
+        borderTop: `3px solid ${T.accent}`,
+        borderRadius: '50%',
+        animation: 'spin 0.7s linear infinite',
+      }}
+    />
   </div>
 );
 
-// ─── APP ─────────────────────────────────────────────────────────────────────
 export default function App() {
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -464,22 +604,41 @@ export default function App() {
   const [replacing, setReplacing] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, hasNext: false, hasPrev: false });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  });
 
   const fetchMedia = async (pageNum = 1) => {
     setLoading(true);
+    setError('');
     try {
       const res = await fetch(`${API_URL}?limit=20&page=${pageNum}`);
       const data = await res.json();
       if (data.success) {
-        setMedia(data.data);
-        setPagination(data.pagination || { page: 1, totalPages: 1, hasNext: false, hasPrev: false });
-      } else setError(data.error || 'Failed to fetch media');
-    } catch { setError('Failed to fetch media'); }
+        setMedia(data.data || []);
+        setPagination(
+          data.pagination || {
+            page: 1,
+            totalPages: 1,
+            hasNext: false,
+            hasPrev: false,
+          }
+        );
+      } else {
+        setError(data.error || 'Failed to fetch media');
+      }
+    } catch {
+      setError('Failed to fetch media');
+    }
     setLoading(false);
   };
 
-  useEffect(() => { fetchMedia(page); }, [page]);
+  useEffect(() => {
+    fetchMedia(page);
+  }, [page]);
 
   const handleAdd = async ({ title, type, file }) => {
     setError('');
@@ -487,12 +646,20 @@ export default function App() {
     formData.append('title', title);
     formData.append('type', type);
     formData.append('file', file);
+
     try {
       const res = await fetch(API_URL, { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.success) { setPage(1); fetchMedia(1); setShowUpload(false); }
-      else setError(data.error || 'Failed to upload');
-    } catch { setError('Failed to upload'); }
+      if (data.success) {
+        setPage(1);
+        fetchMedia(1);
+        setShowUpload(false);
+      } else {
+        setError(data.error || 'Failed to upload');
+      }
+    } catch {
+      setError('Failed to upload');
+    }
   };
 
   const handleUpdate = async ({ title, type }) => {
@@ -504,9 +671,15 @@ export default function App() {
         body: JSON.stringify({ title, type }),
       });
       const data = await res.json();
-      if (data.success) { setEditing(null); fetchMedia(page); }
-      else setError(data.error || 'Failed to update');
-    } catch { setError('Failed to update'); }
+      if (data.success) {
+        setEditing(null);
+        fetchMedia(page);
+      } else {
+        setError(data.error || 'Failed to update');
+      }
+    } catch {
+      setError('Failed to update');
+    }
   };
 
   const handleReplaceFile = async ({ title, type, file }) => {
@@ -515,13 +688,20 @@ export default function App() {
     formData.append('title', title);
     formData.append('type', type);
     formData.append('file', file);
+
     try {
       await fetch(`${API_URL}/${replacing._id}`, { method: 'DELETE' });
       const res = await fetch(API_URL, { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.success) { setReplacing(null); fetchMedia(page); }
-      else setError(data.error || 'Failed to replace');
-    } catch { setError('Failed to replace'); }
+      if (data.success) {
+        setReplacing(null);
+        fetchMedia(page);
+      } else {
+        setError(data.error || 'Failed to replace');
+      }
+    } catch {
+      setError('Failed to replace');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -529,9 +709,14 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
       const data = await res.json();
-      if (data.success) fetchMedia(page);
-      else setError(data.error || 'Failed to delete');
-    } catch { setError('Failed to delete'); }
+      if (data.success) {
+        fetchMedia(page);
+      } else {
+        setError(data.error || 'Failed to delete');
+      }
+    } catch {
+      setError('Failed to delete');
+    }
   };
 
   const wrap = {
@@ -540,11 +725,9 @@ export default function App() {
     paddingBottom: 60,
   };
 
-  // Header
   const header = {
     background: `linear-gradient(180deg, #0b1410 0%, ${T.bg} 100%)`,
     borderBottom: `1px solid ${T.border}`,
-    padding: '0 0 0',
     marginBottom: 40,
     position: 'relative',
     overflow: 'hidden',
@@ -606,32 +789,93 @@ export default function App() {
   return (
     <div style={wrap}>
       <GlobalStyle />
+      <PwaInstallPrompt />
 
-      {/* ── Header ── */}
       <div style={header}>
-        {/* Decorative gradient blobs */}
-        <div style={{ position: 'absolute', top: -60, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,160,69,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -40, left: -60, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(76,175,129,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div
+          style={{
+            position: 'absolute',
+            top: -60,
+            right: -80,
+            width: 300,
+            height: 300,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(232,160,69,0.12) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -40,
+            left: -60,
+            width: 200,
+            height: 200,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(76,175,129,0.08) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
 
         <div style={heroText}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 20,
+            }}
+          >
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.accent, marginBottom: 10 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: T.accent,
+                  marginBottom: 10,
+                }}
+              >
                 ⛰️ Adventure Chronicles
               </div>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 900, color: T.white, lineHeight: 1.1, marginBottom: 12 }}>
-                Your Adventure<br />
+              <h1
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 'clamp(32px, 5vw, 52px)',
+                  fontWeight: 900,
+                  color: T.white,
+                  lineHeight: 1.1,
+                  marginBottom: 12,
+                  marginTop: 0,
+                }}
+              >
+                Your Adventure
+                <br />
                 <span style={{ color: T.accent }}>Media Album</span>
               </h1>
-              <p style={{ color: T.textDim, fontSize: 15, maxWidth: 480, lineHeight: 1.6 }}>
+              <p style={{ color: T.textDim, fontSize: 15, maxWidth: 480, lineHeight: 1.6, margin: 0 }}>
                 Capture, curate, and relive every trail, summit, and wild moment.
               </p>
             </div>
             <button
               style={uploadBtn}
-              onClick={() => { setShowUpload(v => !v); setEditing(null); setReplacing(null); }}
-              onMouseEnter={e => { e.target.style.background = T.accentHover; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = `0 8px 24px rgba(232,160,69,0.3)`; }}
-              onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.transform = 'none'; e.target.style.boxShadow = 'none'; }}
+              onClick={() => {
+                setShowUpload((v) => !v);
+                setEditing(null);
+                setReplacing(null);
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = T.accentHover;
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 24px rgba(232,160,69,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = T.accent;
+                e.target.style.transform = 'none';
+                e.target.style.boxShadow = 'none';
+              }}
             >
               {showUpload ? '✕ Close' : '+ Upload'}
             </button>
@@ -639,65 +883,114 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Content ── */}
       <div style={container}>
-
-        {/* Error Toast */}
         {error && (
-          <div style={{
-            background: 'rgba(224,82,82,0.12)', border: `1px solid ${T.danger}`,
-            color: T.danger, borderRadius: 10, padding: '12px 18px',
-            marginBottom: 24, fontSize: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            animation: 'fadeUp 0.3s ease both',
-          }}>
-            ⚠️ {error}
-            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: T.danger, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+          <div
+            style={{
+              background: 'rgba(224,82,82,0.12)',
+              border: `1px solid ${T.danger}`,
+              color: T.danger,
+              borderRadius: 10,
+              padding: '12px 18px',
+              marginBottom: 24,
+              fontSize: 14,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              animation: 'fadeUp 0.3s ease both',
+            }}
+          >
+            <span>⚠️ {error}</span>
+            <button
+              onClick={() => setError('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: T.danger,
+                cursor: 'pointer',
+                fontSize: 18,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
           </div>
         )}
 
-        {/* Forms */}
         {showUpload && !editing && !replacing && (
           <MediaForm onSubmit={handleAdd} onCancel={() => setShowUpload(false)} />
         )}
         {editing && (
-          <MediaForm onSubmit={handleUpdate} initialData={editing} isEdit onCancel={() => setEditing(null)} />
+          <MediaForm
+            onSubmit={handleUpdate}
+            initialData={editing}
+            isEdit
+            onCancel={() => setEditing(null)}
+          />
         )}
         {replacing && (
-          <MediaForm onSubmit={handleReplaceFile} initialData={replacing} onCancel={() => setReplacing(null)} />
-        )}
-
-        {/* Gallery */}
-        {loading ? <Spinner /> : (
-          <MediaList
-            media={media}
-            onEdit={(item) => { setEditing(item); setReplacing(null); setShowUpload(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            onDelete={handleDelete}
-            onReplace={(item) => { setReplacing(item); setEditing(null); setShowUpload(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          <MediaForm
+            onSubmit={handleReplaceFile}
+            initialData={replacing}
+            onCancel={() => setReplacing(null)}
           />
         )}
 
-        {/* Pagination */}
+        {loading ? (
+          <Spinner />
+        ) : (
+          <MediaList
+            media={media}
+            onEdit={(item) => {
+              setEditing(item);
+              setReplacing(null);
+              setShowUpload(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onDelete={handleDelete}
+            onReplace={(item) => {
+              setReplacing(item);
+              setEditing(null);
+              setShowUpload(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
         {!loading && media.length > 0 && (
           <div style={paginationBar}>
             <button
               style={pageBtn(!pagination.hasPrev)}
               disabled={!pagination.hasPrev}
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              onMouseEnter={e => { if (pagination.hasPrev) e.target.style.borderColor = T.accent; }}
-              onMouseLeave={e => { e.target.style.borderColor = T.border; }}
-            >← Prev</button>
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onMouseEnter={(e) => {
+                if (pagination.hasPrev) e.target.style.borderColor = T.accent;
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.borderColor = T.border;
+              }}
+            >
+              ← Prev
+            </button>
 
             <span style={{ fontSize: 13, color: T.muted, fontWeight: 500, padding: '0 4px' }}>
-              Page <strong style={{ color: T.white }}>{pagination.page}</strong> of <strong style={{ color: T.white }}>{pagination.totalPages}</strong>
+              Page <strong style={{ color: T.white }}>{pagination.page}</strong> of{' '}
+              <strong style={{ color: T.white }}>{pagination.totalPages}</strong>
             </span>
 
             <button
               style={pageBtn(!pagination.hasNext)}
               disabled={!pagination.hasNext}
-              onClick={() => setPage(p => p + 1)}
-              onMouseEnter={e => { if (pagination.hasNext) e.target.style.borderColor = T.accent; }}
-              onMouseLeave={e => { e.target.style.borderColor = T.border; }}
-            >Next →</button>
+              onClick={() => setPage((p) => p + 1)}
+              onMouseEnter={(e) => {
+                if (pagination.hasNext) e.target.style.borderColor = T.accent;
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.borderColor = T.border;
+              }}
+            >
+              Next →
+            </button>
           </div>
         )}
       </div>
